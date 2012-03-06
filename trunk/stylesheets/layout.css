@@ -1,0 +1,52 @@
+textarea.input {
+	width: 600px;
+	height: 120px;
+	border: 3px solid #cccccc;
+	padding: 5px;
+	font-family: Tahoma, sans-serif;
+
+}
+
+textarea.output {
+	width: 600px;
+	height: 120px;
+	border: 3px solid #cccccc;
+	padding: 5px;
+	font-family: Tahoma, sans-serif;
+
+}
+
+div#interface {
+	background-color: #bbbbbb;
+	-moz-border-radius: 15px;
+	border-radius: 15px;
+}
+
+div.input {
+	float:left;
+	padding: 5px;
+}
+
+div.output {
+	float:right;
+	padding: 5px;
+}
+div.generate-button {
+	clear:both;
+}
+
+div.midi {
+	margin:auto;
+	-moz-border-radius: 15px;
+	border-radius: 15px;
+}
+
+div.score {
+	margin:auto;
+	-moz-border-radius: 15px;
+	border-radius: 15px;	
+
+}
+
+
+
