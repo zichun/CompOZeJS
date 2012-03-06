@@ -4,8 +4,8 @@ var Interval =
 	function Interval(notes, semitones) {			
 		var self = this;
 		
-		while (notes < 0) notes += 7;
-		notes = notes % 7;
+		while(notes < 0) notes += 7;
+		if (notes > 8) notes %= 8;
 		
 		while(semitones < 0) semitones += 12;
 		semitones = semitones % 12;
@@ -28,7 +28,16 @@ var Interval =
 	}
 	
 	Interval.noteInterval = function(low, high) {
-		return (new Interval(high.getNoteNumber() - low.getNoteNumber()+1,  
+		if ( !( low instanceof Note) || !(high instanceof Note) ) throw("Given arguments not of Note type");
+		if (low.getAbsoluteSemitone() > high.getAbsoluteSemitone()) {
+			var tmp = low;
+			low = high;
+			high = tmp;
+		}
+		var offset = 0;
+		if (high.getNoteNumber() === low.getNoteNumber() && high.getAbsoluteSemitone() > low.getAbsoluteSemitone()) offset += 8;
+
+		return (new Interval(offset + high.getNoteNumber() - low.getNoteNumber(),  
 			high.getSemitone() - low.getSemitone() ));
 	}
 

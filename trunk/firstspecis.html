@@ -21,7 +21,7 @@ function firstSpecies() {
 	
 	var composition = [[], dorian];
 	var result = runDFS(0, composition);
-	
+
 	var abc = document.getElementById('abc');
 	abc.value = '';
 	for (var i=0;i<composition[0].length;++i) {
@@ -35,13 +35,14 @@ function runDFS(i, composition) {
 		return true;
 	}
 	
-	
 	for (var notes in Note.NotesToSemiTones) {
 		if (Note.NotesToSemiTones.hasOwnProperty(notes) === false) continue;
 		if (notes.length === 2) continue;
 		
-		composition[0][i] = new Note(notes,0);		
-		if (runDFS(i+1, composition)) return true;
+		for (var j=0;j<=1;++j) {
+			composition[0][i] = new Note(notes,j);
+			if (runDFS(i+1, composition)) return true;
+		}
 	}
 	return false;
 }
@@ -86,9 +87,33 @@ var constraints = [
 			if (interval.getType === Interval.AUGMENTED || interval.getType === Interval.DIMINISHED) return false;
 		}
 		return true;
+	},
+	
+	function noMajorSixOrSevenLeap(composition) {
+		for (var i=0;i<composition[0].length;++i) {
+			var interval = composition[0][i].interval( composition[0][i] );
+			var n = interval.getInterval();
+			if (interval.getType() === Interval.MAJOR && (n === 6 || n === 7)) return false;
+		}
+		return true;
+	},
+	
+	function noUnison(composition) {
+		// Unisons are not allowed, except in the first bar.
+		for (var i=1;i<composition[0].length;++i) {
+			if (composition[0][i].getAbsoluteSemitone() === composition[1][i].getAbsoluteSemitone()) return false;
+		}
+		return true;
+	},
+	function firstBarIsOctaveFifthOrUnison(composition) {
+		if (composition[0].length > 0) {
+			var interval = composition[0][0].interval( composition[1][0] );
+			var n = interval.getInterval();
+			if (n != 0 && n != 5 && n != 8) return false;
+		}
+		return true;
 	}
 ];
-
 </script>
 </head>
 
