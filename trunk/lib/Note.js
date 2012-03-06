@@ -16,6 +16,15 @@ var Note =
 		self.getNoteNumber = function (){
 			return ((note.charCodeAt(0) - 67) + 7) % 7;
 		}
+		self.getAbsoluteSemitone = function() {
+			// Middle C = 0
+			var self = this;
+			//if (self.getOctave() >= 0) {
+				return self.getOctave() * 12 + self.getSemitone();
+			//} else {
+			//	return self.getOctave() * 12 + self.getSemitone();
+			//}
+		}
 		
 		return self;
 	}
