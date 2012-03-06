@@ -37,7 +37,7 @@ function runDFS(i, composition) {
 	
 	for (var notes in Note.NotesToSemiTones) {
 		if (Note.NotesToSemiTones.hasOwnProperty(notes) === false) continue;
-		if (notes.length === 2) continue;
+		//if (notes.length === 2) continue;
 		
 		for (var j=0;j<=1;++j) {
 			composition[0][i] = new Note(notes,j);
@@ -60,7 +60,7 @@ var constraints = [
 		for (var i=0;i<composition[0].length;++i) {
 			var interval = composition[0][i].interval( composition[1][i] );
 			var n = interval.getInterval();
-			if (n !== 0 && n !== 5 && n !== 3 && n !== 6) return false;
+			if (n !== 0 && n !== 5 && n !== 3 && n !== 6 && n !== 8) return false;
 			if (interval.getType() === Interval.AUGMENTED || interval.getType() === Interval.DIMINISHED) return false;
 			if (n === 5 && interval.getType() !== Interval.PERFECT) return false;
 		}
@@ -112,8 +112,33 @@ var constraints = [
 			if (n != 0 && n != 5 && n != 8) return false;
 		}
 		return true;
+	},
+	function secondLastBarMajorSixth(composition) {
+		if (composition[0].length >= composition[1].length-1) {
+			var lb = composition[1].length-2;
+			var interval = composition[0][lb].interval( composition[1][lb] );
+			var n = interval.getInterval();
+			if (n === 6 && interval.getType() === Interval.MAJOR) return true;
+			return false;
+		}
+		return true;
+	},
+	function lastBarOctave(composition) {
+		if (composition[0].length >= composition[1].length) {
+			var lb = composition[1].length-1;
+			var interval = composition[0][lb].interval( composition[1][lb] );
+			var n = interval.getInterval();
+			if (n === 8) return true;
+			return false;
+		}
+		return true;
 	}
 ];
+
+//var a = new Note('D',0);
+//var b = new Note('Db',0);
+//alert(a.interval(b).getInterval());
+//firstSpecies = false;
 </script>
 </head>
 

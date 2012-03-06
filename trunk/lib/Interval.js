@@ -3,9 +3,10 @@ var Interval =
 
 	function Interval(notes, semitones) {			
 		var self = this;
-		
+
 		while(notes < 0) notes += 7;
-		if (notes > 8) notes %= 8;
+		if (notes > 7) notes %= 7;
+		++notes;
 		
 		while(semitones < 0) semitones += 12;
 		semitones = semitones % 12;
@@ -35,7 +36,7 @@ var Interval =
 			high = tmp;
 		}
 		var offset = 0;
-		if (high.getNoteNumber() === low.getNoteNumber() && high.getAbsoluteSemitone() > low.getAbsoluteSemitone()) offset += 8;
+		if (high.getNoteNumber() === low.getNoteNumber() && high.getOctave() > low.getOctave()) offset += 7;
 
 		return (new Interval(offset + high.getNoteNumber() - low.getNoteNumber(),  
 			high.getSemitone() - low.getSemitone() ));
