@@ -4,9 +4,8 @@ var firstSpecies =
 	function firstSpecies(input, output) {
 	
 		var dorian = parseInput(input);
-		
 		var composition = [[], dorian];
-		var result = runDFS(0, composition);
+		var result = runDFS(0, composition, 1);
 		
 		var renderedOutput = '';
 
@@ -15,13 +14,18 @@ var firstSpecies =
 		}
 		renderedOutput += "|";
 		output.val(renderedOutput);
+		
 		return renderedOutput;
 	}
-	function runDFS(i, composition) {
+	var fs = 0;
+	function runDFS(i, composition, soln) {
+		composition[0].splice(i, composition[0].length-1);
 		if (checkConstraints(composition) === false) return false;
+
 		if (i === composition[1].length) {
 			// we got a solution
-			return true;
+			++fs; if (fs === soln) return true;
+			return false;
 		}
 		
 		for (var notes in Note.NotesToSemiTones) {
@@ -30,7 +34,7 @@ var firstSpecies =
 			
 			for (var j=0;j<=1;++j) {
 				composition[0][i] = new Note(notes,j);
-				if (runDFS(i+1, composition)) return true;
+				if (runDFS(i+1, composition,soln)) return true;
 			}
 		}
 		return false;
@@ -58,8 +62,8 @@ var firstSpecies =
 		
 		function noDirectToPerfectConsonance(composition) {
 			for (var i=0;i<composition[0].length-1;++i) {
-				var s0 = composition[0][i+1].getSemitone() - composition[0][i].getSemitone();
-				var s1 = composition[1][i+1].getSemitone() - composition[1][i].getSemitone();
+				var s0 = composition[0][i+1].getAbsoluteSemitone() - composition[0][i].getAbsoluteSemitone();
+				var s1 = composition[1][i+1].getAbsoluteSemitone() - composition[1][i].getAbsoluteSemitone();
 				if (s0 * s1 > 0) { // direct motion
 					var interval = composition[0][i+1].interval( composition[1][i+1] );
 					var n = interval.getInterval();
@@ -77,11 +81,59 @@ var firstSpecies =
 			return true;
 		},
 		
-		function noMajorSixOrSevenLeap(composition) {
-			for (var i=0;i<composition[0].length;++i) {
-				var interval = composition[0][i].interval( composition[0][i] );
+		function noMajorSixOrSevenOrOctaveLeap(composition) {
+			for (var i=0;i<composition[0].length-1;++i) {
+				var interval = composition[0][i].interval( composition[0][i+1] );
 				var n = interval.getInterval();
 				if (interval.getType() === Interval.MAJOR && (n === 6 || n === 7)) return false;
+				
+				if ( Math.abs(composition[0][i+1].getAbsoluteSemitone() - composition[0][i].getAbsoluteSemitone()) > 12) return false;
+			}
+			return true;
+		},
+		
+		function noDescendingMinorSixth(composition) {
+			for (var i=0;i<composition[0].length-1;++i) {
+				if (composition[0][i].getAbsoluteSemitone() <= composition[0][i].getAbsoluteSemitone()) continue;
+				
+				var interval = composition[0][i+1].interval( composition[0][i] );
+				var n = interval.getInterval();
+				if (interval.getType() === Interval.MINOR && n === 6) return false;
+			}
+			return true;
+		},
+		
+		function noCrossing(c) {
+			// voices cannot cross
+			if (c[0].length === 0) return true;
+			var above = (c[0][c[0].length-1].getAbsoluteSemitone() > c[1][c[0].length-1].getAbsoluteSemitone());
+			for (var i=0;i<c[0].length;++i) {
+				var sabove = (c[0][i].getAbsoluteSemitone() > c[1][i].getAbsoluteSemitone());
+				if (sabove !== above) return false;
+			}
+			return true;
+		},
+
+		function stepAfterAscendingMinorSixthOrOctave(composition) {
+			function isStep(a, b, ascending) {
+				if (ascending && a.getAbsoluteSemitone() >= b.getAbsoluteSemitone()) return false;
+				if (ascending === false && b.getAbsoluteSemitone() >= a.getAbsoluteSemitone()) return false;
+				var interval = a.interval( b );
+				var n = interval.getInterval();
+				return n===2;
+			}
+			for (var i=0;i<composition[0].length-2;++i) {
+				var ascending = (composition[0][i+1].getAbsoluteSemitone() > composition[0][i].getAbsoluteSemitone());
+				if ( Math.abs(composition[0][i+1].getAbsoluteSemitone() - composition[0][i].getAbsoluteSemitone()) === 12) {
+					// ascending or descending octave followed by a step
+					if (isStep(composition[0][i+1], composition[0][i+2], !ascending) === false) return false;
+				} else {
+					var interval = composition[0][i].interval( composition[0][i+1] );
+					var n = interval.getInterval();
+					if (interval.getType() === Interval.MINOR && n === 6 ) {
+						if (isStep(composition[0][i+1], composition[0][i+2], !ascending) === false) return false;
+					}
+				}
 			}
 			return true;
 		},
@@ -173,15 +225,11 @@ var firstSpecies =
 			}
 			return true;
 		}
-		
-
-		
 	];
 
 	function XOR(a,b) {
 	  return ( a || b ) && !( a && b );
 	}
-	
 	function parseInput(input) {
 		input = input.split("8|");
 		
@@ -189,27 +237,23 @@ var firstSpecies =
 		
 		for (var i = 0; i < input.length-1; i++) {
 			if ((input[i] >= 'a') && (input[i] <= 'z')) {
-				melody.push(new Note(input[i], 1));
+				melody.push(new Note(input[i].toUpperCase(), 1));
 			} else if ((input[i] >= 'A') && (input[i] <= 'Z')) {
 				melody.push(new Note(input[i], 0));
 			} else {
 				console.log("error: "+input[i]);
 			}
 			
-		}
-		
+		}	
 		return melody;
-	
-		
-	
 	}
+	/*var dorian = parseInput("D8|F8|E8|D8|G8|F8|A8|G8|F8|E8|D8||");
+	var soln = parseInput("A8|A8|G8|A8|B8|c8|c8|B8|d8|c#8|d8||");
+	var c = [soln, dorian];
+	alert(checkConstraints(c));*/
+
 	return firstSpecies;
 })();
-//var a = new Note('D',0);
-//var b = new Note('Db',0);
-//alert(a.interval(b).getInterval());
-//firstSpecies = false;
-
 
 $(function() {
 	createInterface($('#interface')[0], 'D8|F8|E8|D8|G8|F8|A8|G8|F8|E8|D8||');

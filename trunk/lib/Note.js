@@ -16,6 +16,20 @@ var Note =
 		self.getNoteNumber = function (){
 			return ((note.charCodeAt(0) - 67) + 7) % 7;
 		}
+		self.isSharp = function() {
+			return (note.length > 1 && note[1] == '#');
+		}
+		self.isFlat = function() {
+			return (note.length > 1 && note[1] == 'b');
+		}
+		self.getCoordinate = function() {
+			var self = this;
+			var tr = self.getOctave() * 21 + self.getNoteNumber();
+			if (self.isSharp) ++tr;
+			else if(self.isFlat) --tr;
+			return tr;
+		}
+		
 		self.getAbsoluteSemitone = function() {
 			// Middle C = 0
 			var self = this;
@@ -51,7 +65,20 @@ var Note =
 		}
 		return tr;
 	}
-	
+
+	Note.CoordinateToNote = function(coordinate) {
+		var nc = coordinate;
+		while(nc < 0) nc += 24;
+		var note = Math.floor((nc%24) / 3);
+		var accidental = '';
+		
+		if ( nc % 3 === 0) accidental = 'b';
+		else if (nc % 3 === 2) accidental = '#';
+		
+		return new Note( Note.Notes[note] + accidental, Math.floor(coordinate / 24)); 
+	}
+	//012 345 678 91011 121314 151617 181920 212223
+	Note.Notes = ['C','D','E','F','G','A','B','C'];
 	Note.NotesToSemiTones = {
 		 'Cb': 11
 		,'C' : 0
