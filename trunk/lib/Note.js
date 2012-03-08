@@ -68,16 +68,18 @@ var Note =
 
 	Note.CoordinateToNote = function(coordinate) {
 		var nc = coordinate;
-		while(nc < 0) nc += 24;
-		var note = Math.floor((nc%24) / 3);
+		while(nc < 0) nc += 21;
+		var note = Math.floor((nc%21) / 3);
 		var accidental = '';
 		
 		if ( nc % 3 === 0) accidental = 'b';
 		else if (nc % 3 === 2) accidental = '#';
-		
-		return new Note( Note.Notes[note] + accidental, Math.floor(coordinate / 24)); 
+
+		return new Note( Note.Notes[note] + accidental, Math.floor(coordinate / 21)); 
 	}
-	//012 345 678 91011 121314 151617 181920 212223
+	//012 345 678 91011 121314 151617 181920 
+	//212223 242526 272829 303132 333435 363738 394041
+	//424344 454647
 	Note.Notes = ['C','D','E','F','G','A','B','C'];
 	Note.NotesToSemiTones = {
 		 'Cb': 11
