@@ -1,0 +1,112 @@
+<html>
+<head>
+<script src="lib/abcjs_editor_1.0.12-min.js" type="text/javascript"></script>
+<script src="lib/jq.js" type="text/javascript"></script>
+<script src="lib/fd.js" type="text/javascript"></script>
+<script src="lib/DomainHelper.js" type="text/javascript"></script>
+<script src="lib/ConstraintFirstSpecies.js" type="text/javascript"></script>
+
+<script src="lib/Note.js" type="text/javascript"></script>
+<script src="lib/Interval.js" type="text/javascript"></script>
+<!--script src="test.js" type="text/javascript"></script-->
+<script>
+function ArrayToABC(arr) {
+	var tr = '';
+	for (var i=0;i<arr.length;++i) {
+		if (tr.length > 0) tr += '|';
+		tr += arr[i].toABC()+'4';
+	}
+	tr += '||';
+	return tr;
+}
+function SolnToABC(soln) {
+	var arr = [];
+	for (var notes in soln) {
+		arr.push( Note.CoordinateToNote(soln[notes]) );
+	}
+	return ArrayToABC(arr);
+}
+$(function() {
+	$("#solve-button").click(function() {
+		var CF = $("#input").val().split('|');
+		for (var i=0;i<CF.length;++i) {
+			CF[i] = new Note(CF[i], 0);
+		}
+
+		renderAbc('button-div', ArrayToABC(CF));
+		
+		var start = Date.now();
+		cnt = 0;
+		SolveFirstSpecies(CF, 900, 'treble', function(result) {
+			var now = Date.now();
+			var S = result.best || result.space;
+			if (result.status === 'solved') {
+				var soln = S.solution();
+				++cnt;
+				if (cnt > 850)
+				showSoln(CF, soln);
+			}
+		});
+	});
+});
+var debug = false;
+var showSoln =
+(function() {
+	var cnt = 0;
+	return function(cf, soln) {
+		if (debug !== true) {
+			var $soln = $('<div class="soln" id="soln'+cnt+'" ></div>').appendTo("#solns");
+			$soln.append( '<div id="soln-ta-'+cnt+'"></div>')
+				.append( '<div id="soln-midi-'+cnt+'"></div>')
+			
+			var abc = 'X:1\nM:C|\nV: RH1 clef=treble\nV: LH1 clef=treble\nK: C\n%\n[V: RH1] ' + SolnToABC(soln);
+			abc += '\n[V: LH1] ' + ArrayToABC(cf);
+			
+			renderAbc('soln-ta-'+cnt, abc);
+			renderMidi('soln-midi-'+cnt, abc);
+			++cnt;
+		} else {
+			document.write('<tt>'+JSON.stringify(soln) + "</tt><br />");
+		}
+	}
+})();
+</script>
+<style>
+html, body, div, span, object, iframe,h1, h2, h3, h4, h5, h6, p, blockquote, pre,a, abbr, acronym, address, big, cite, 
+code,del, dfn, em, img, ins, kbd, q, samp,small, strike, strong, sub, sup, tt, var,b, i, dl, dt, dd, ol, ul, li,fieldset, 
+form, label, legend,table, caption, tbody, tfoot, thead, tr, th, td  {margin: 0;padding: 0;border: 0;font-size: 100%;vertical-align: baseline;background: transparent; }
+address, cite, q, dfn {font-style: normal;}
+h1, h2, h3, h4, h5, h6, th {font-weight: normal;}
+a, ins, del {text-decoration: none;color: black;}
+q, blockquote {quotes: none;}
+q:after, q:before,blockquote:after, blockquote:before {content: "";content: none;}
+table {border-collapse: collapse;border-spacing: 0;}
+th, td {vertical-align: top;}
+th {text-align: left;}
+button, input, select, textarea {font: inherit;text-align:justify;}
+ul {list-style-type: none;}
+.clearer {clear: both; height: 0px;}
+hr { border: 1px solid black; border-width: 1px 0 0 0;}
+.hide {display: none;}
+.fh { height: 100%; }
+#solns .soln {
+	padding: 0 0 20px 20px;
+	background: #ffc;
+	border-radius: 10px;
+	margin: 10px;
+}
+#solns .soln a { color: #933; text-decoration: underline;}
+</style>
+</head>
+<body>
+
+<div id="button-div">
+	<!--textarea id="input" style="width: 600px; height: 60px;font-family: consolas">D|F|E|D|G|F|A|G|F|E|D</textarea><br /-->
+	<textarea id="input" style="width: 600px; height: 60px;font-family: consolas">C|C|G|G|A|A|G|F|F|E|E|D|D|C</textarea><br />
+	<input type="button" value="Solve" id="solve-button" />
+</div>
+<div id="solns">
+</div>
+
+</body>
+</html>
