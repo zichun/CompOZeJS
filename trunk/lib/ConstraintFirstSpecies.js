@@ -292,7 +292,7 @@ function SolveFirstSpecies(options, cb) {
 				})(i);
 			}
 		}
-		
+		/*
 		,function minimizeParallels(S, root) {
 			// computes the number of parallels in the soln vis-a-vis CF
 			var sum = [], thousand = S.const(1000);
@@ -308,7 +308,7 @@ function SolveFirstSpecies(options, cb) {
 			}
 			S.sum( sum, 'Parallels' );
 		}
-
+	*/
 	];
 	})();
 
