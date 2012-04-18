@@ -31,11 +31,6 @@ function SolveFirstSpecies(options, cb) {
 	for (var i=0;i<cantus_firmus.length;++i) {
 		root.push('N'+i);
 	}
-
-	var S = new FD.space();
-	S.decl(root, [semitoneRange] );
-	S.decl('Parallels');
-	S.decl('SameMotion');
 	
 	/**
 	 * Constraints is an array of functions
@@ -334,26 +329,44 @@ function SolveFirstSpecies(options, cb) {
 	];
 	})();
 
-	// initialize constraints
-	for (var i=0;i<constraints.length;++i) {
-		function has(arr, el) {
-			for (var i=0;i<arr.length;++i) { if (arr[i] === el) return true; }
-			return false;
+	var problem = {};
+	
+	var S = new FD.space();
+	problem['script'] = function(S) {
+		S.decl(root, [semitoneRange] );
+		S.decl('Parallels');
+		S.decl('SameMotion');
+
+		// initialize constraints
+		for (var i=0;i<constraints.length;++i) {
+			function has(arr, el) {
+				for (var i=0;i<arr.length;++i) { if (arr[i] === el) return true; }
+				return false;
+			}
+			if (options.constraints === true || has(options.constraints, constraints[i].name)) {
+				constraints[i](S, root);
+			}
 		}
-		if (options.constraints === true || has(options.constraints, constraints[i].name)) {
-			constraints[i](S, root);
-		}
-	}
-	FD.distribute[options.search_strategy](S, root);
+		FD.distribute[options.search_strategy](S, root);
+		
+		return S;
+	};
+	
 
 	var cnt = 0;
 	var state = {space: S};
-	
 	function ordering(S, solution) {
 		var pscore = 1, mscore = 1;
 		S.lt( S.wsum([pscore,mscore], ['Parallels','SameMotion']), 
 			S.const(pscore * solution.Parallels + mscore * solution.SameMotion));
 	}
+
+	if (options.search_ordering === 'branch_and_bound') {
+		problem['ordering'] = options.ordering || ordering;
+	}
+	problem['solve_for'] = FD.search.solve_for_variables(root); 
+
+	
 	function solve() {
 		state.single_step = true;
 		state.is_solved = state.is_solved || FD.search.solve_for_variables(root);
@@ -374,5 +387,10 @@ function SolveFirstSpecies(options, cb) {
 		}
 	}
 	
-	solve();
+	if (options.visualize) {
+		FD.ExploreBest(problem, options.visualize);
+	} else {
+		S = problem['script'](S);
+		solve();
+	}
 }
