@@ -1,11 +1,20 @@
+/**
+ * Static methods that operates on domains (mostly from fd.js)
+ */
 var DomainHelper = {
 	FD_SUP:  100000000,
 	
+	/**
+	 * Ensure that a domain is not empty
+	 */
 	domain_non_empty: function(dom) {
         if (dom.length === 0) { throw 'fail'; }
         return dom;
 	},
 	
+	/**
+	 * Convert an array list to a domain
+	 */
 	list_to_domain: function(list) {
 		var i, tr = [];
 		if (!list || !list.length) throw("Invalid list given!");
@@ -24,6 +33,9 @@ var DomainHelper = {
 		return tr;
 	},
 	
+	/**
+	 * Converts a domain to a list contain its items
+	 */
 	domain_to_list: function(dom) {
 		var tr = [];
 		for (var i=0;i<dom.length;++i) {
@@ -34,6 +46,9 @@ var DomainHelper = {
 		return tr;
 	},
 	
+	/**
+	 * Intersects two domains (from fd.js)
+	 */
     domain_intersection: function(dom1, dom2, r) {
         var i, j, len1, len2, b1, b2, d1, d2, d3, d4, d, mx, mn;
 
@@ -84,6 +99,9 @@ var DomainHelper = {
         }
     },
 
+	/**
+	 * Simplify a domain (from fd.js)
+	 */
     simplify_domain: function(d) {
         if (d.length === 0) {
             return d;
@@ -141,6 +159,9 @@ var DomainHelper = {
         return result;
     },
 
+	/**
+	 * Return an array (pair) containing the bounds of the domain
+	 */
     domain_bounds: function(d) {
         if (d.length > 0) {
             return [d[0][0], d[d.length-1][1]];
@@ -149,6 +170,9 @@ var DomainHelper = {
         }
     },
 
+	/**
+	 * Checks if two domains are equal
+	 */
     domain_equal: function(d1, d2) {
         if (d1.length != d2.length) {
             return false;

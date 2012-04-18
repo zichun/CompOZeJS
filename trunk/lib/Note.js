@@ -1,8 +1,27 @@
+/**
+ * Note Class
+ **/
 var Note =
-
 (function() {
+	
 	function Note(note, octave) {
 		var self = this;
+		
+		var nn = note;
+		var cnt = nn.length-1;
+		while(cnt >= 0 && nn[cnt] == '^') {
+			octave++;
+			--cnt;
+		}
+		cnt = nn.length-1;
+		while(cnt >= 0 && nn[cnt] == 'v') {
+			octave--;
+			--cnt;
+		}
+		note = "";
+		for (var i=0;i<=cnt;++i) {
+			note += nn[i];
+		}
 
 		self.getOctave = function() {
 			return octave;
@@ -24,9 +43,9 @@ var Note =
 		}
 		self.getCoordinate = function() {
 			var self = this;
-			var tr = self.getOctave() * 21 + self.getNoteNumber();
-			if (self.isSharp) ++tr;
-			else if(self.isFlat) --tr;
+			var tr = self.getOctave() * 21 + self.getNoteNumber() * 3 + 1;
+			if (self.isSharp()) ++tr;
+			else if(self.isFlat()) --tr;
 			return tr;
 		}
 		
@@ -107,4 +126,5 @@ var Note =
 
 	
 	return Note;
+	
 })();

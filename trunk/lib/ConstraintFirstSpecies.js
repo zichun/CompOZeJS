@@ -1,12 +1,31 @@
-// requires DomainHelper.js, fd.js, 
-
+// requires DomainHelper.js, fd.js, jq.js
 // todo: factorize parameters to options
-function SolveFirstSpecies(cantus_firmus, soln_limit, clef, cb) {
+function SolveFirstSpecies(options, cb) {
+
+	if (typeof options['CF'] === 'undefined') {
+		throw('Cantus Firmus (CF) not provided!');
+	}
+
+	/**
+	 * Set up Options
+	 **/ 
+	options = $.extend({
+		soln_limit: false, 
+		clef: 'treble',
+		search_strategy: 'split',
+		search_ordering: 'branch_and_bound'
+	}, options);
+	
+
 	var root = [];
+	var cantus_firmus = options.CF;
+	var clef = options.clef;
+	var soln_limit = options.soln_limit;
+
 	if (clef === 'treble') {
 		semitoneRange = [0, 48];
 	} else {
-		semitoneRange = [-12,0];
+		semitoneRange = [-48,0];
 	}
 	for (var i=0;i<cantus_firmus.length;++i) {
 		root.push('N'+i);
@@ -14,13 +33,15 @@ function SolveFirstSpecies(cantus_firmus, soln_limit, clef, cb) {
 
 	var S = new FD.space();
 	S.decl(root, [semitoneRange] );
-
+	S.decl('Parallels');
+	
+	/**
+	 * Constraints is an array of functions
+	 *  that takes in a Space and the the list of notes
+	 *  and initializes the propagators for the constraints
+	 */
 	var constraints = 
 	(function() {
-		function intervalFromSolutions(s1, s2) {
-			var n1 = Note.CoordinateToNote(s1), n2 = Note.CoordinateToNote(s2);
-			return n1.interval(n2);
-		}
 		function noteConstraints(S, notes, check, debug) {
 			function extractNote(ind) {
 				for (var tr=[], i=0;i<notes.length;++i) {
@@ -106,7 +127,6 @@ function SolveFirstSpecies(cantus_firmus, soln_limit, clef, cb) {
 		 */
 		function noDissonance(S, root) {
 			// First Species: no dissonances are allowed
-			// todo: factorize cantus_firmus
 			for (var i=0;i<cantus_firmus.length;++i) {
 			(function(i) {
 				oneNoteConstraint( S, 'N'+i, function(cnote) {
@@ -216,7 +236,7 @@ function SolveFirstSpecies(cantus_firmus, soln_limit, clef, cb) {
 			return true;
 		}
 
-		,function firstBarIsOctaveFifthOrUnison(composition) {
+		,function firstBarIsOctaveFifthOrUnison(S, root) {
 			// first species: The counterpoint in the first bar must be an octave or a fifth above the cantus firmus, or a unison.
 			oneNoteConstraint( S, 'N0', function(cnote) {
 				var interval = cnote.interval( cantus_firmus[0] );
@@ -226,7 +246,7 @@ function SolveFirstSpecies(cantus_firmus, soln_limit, clef, cb) {
 			});
 		}
 		
-		,function secondLastBarMajorSixth(composition) {
+		,function secondLastBarMajorSixth(S, root) {
 			// first species: In the penultimate bar the counterpoint must be a major sixth above the cantus firmus. This requires an accidental in the cantus_firmus, Mixolydian, and Aeolian modes.
 			var lb = cantus_firmus.length-2;
 			oneNoteConstraint( S, 'N' + lb, function(cnote) {
@@ -237,7 +257,7 @@ function SolveFirstSpecies(cantus_firmus, soln_limit, clef, cb) {
 			});
 		}
 
-		,function lastBarOctave(composition) {
+		,function lastBarOctave(S, root) {
 			// first species: In the final bar the counterpoint must be an octave above the cantus firmus.
 			var lb = cantus_firmus.length-1;
 			oneNoteConstraint( S, 'N' + lb, function(cnote) {
@@ -248,7 +268,7 @@ function SolveFirstSpecies(cantus_firmus, soln_limit, clef, cb) {
 			});
 		}
 
-		,function noCrossing(c) {
+		,function noCrossing(S, root) {
 			// voices cannot cross
 			for (var i=1;i<cantus_firmus.length;++i) {
 			(function(i) {
@@ -260,17 +280,33 @@ function SolveFirstSpecies(cantus_firmus, soln_limit, clef, cb) {
 			}
 		}
 		
-		,function noAccidentalsExceptForSecondLastBar(c) {
+		,function noAccidentalsExceptForSecondLastBar(S, root) {
 			// general: Accidentals should generally be avoided since they are not in the character of the ecclesiastical modes. However, the penultimate bar in each species requires a specific sequence which may demand the use of a sharp.
 			for (var i=0;i<cantus_firmus.length;++i) {
 				if (i === cantus_firmus.length-2) continue;
-			(function(i) {
-				oneNoteConstraint( S, 'N'+i, function(cnote) {
-					if (cnote.isSharp() || cnote.isFlat()) return false;
-					return true;
-				});
-			})(i);
+				(function(i) {
+					oneNoteConstraint( S, 'N'+i, function(cnote) {
+						if (cnote.isSharp() || cnote.isFlat()) return false;
+						return true;
+					});
+				})(i);
 			}
+		}
+		
+		,function minimizeParallels(S, root) {
+			// computes the number of parallels in the soln vis-a-vis CF
+			var sum = [], thousand = S.const(1000);
+			for (var i=0;i<cantus_firmus.length-1;++i) {
+				(function(i) {
+					var first_note = S.const( cantus_firmus[i].getCoordinate() + 1000);
+					var second_note = S.const( cantus_firmus[i+1].getCoordinate() + 1000);
+					sum.push(
+						S.reified('eq', 
+							[ S.plus(first_note, 'N'+(i+1) ),
+							  S.plus(second_note, 'N'+(i)) ]));
+				})(i);
+			}
+			S.sum( sum, 'Parallels' );
 		}
 
 	];
@@ -280,19 +316,33 @@ function SolveFirstSpecies(cantus_firmus, soln_limit, clef, cb) {
 	for (var i=0;i<constraints.length;++i) {
 		constraints[i](S, root);
 	}
-	FD.distribute.fail_first(S, root);
+	FD.distribute[options.search_strategy](S, root);
 
 	var cnt = 0;
 	var state = {space: S};
 	
+	function ordering(S, solution) {
+		S.lt('Parallels', S.const(solution.Parallels));
+	}
 	function solve() {
-		FD.search.depth_first(state);
-		cnt ++;
+		state.single_step = true;
+		state.is_solved = state.is_solved || FD.search.solve_for_variables(root);
+
+		if (options.search_ordering === 'branch_and_bound') {
+			state = FD.search.branch_and_bound(state, ordering);		
+		} else if (options.search_ordering === 'dfs') {
+			state = FD.search.depth_first(state);
+		} else {
+			throw('Search ordering not supported!');
+		}
+		
+		cnt++;
 		cb(state);
-		if (cnt > soln_limit) return;
+		if (soln_limit && cnt > soln_limit) return;
 		if (state.more) {
 			setTimeout(solve, 10);
 		}
 	}
+	
 	solve();
 }
