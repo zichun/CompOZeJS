@@ -1110,7 +1110,6 @@ function initializing(root_space, container, type) {
 	// no. of stable children and no. of failed children.
 	function display_info(node, x, y) {
 		var texts = [], max_width = 0; 
-		
 		texts[0] = "Soln: " + node.succeeded_children;
 		texts[1] = "Stable: " + node.stable_children;
 		texts[2] = "Failed: " + node.failed_children;

@@ -338,12 +338,16 @@ function SolveFirstSpecies(options, cb) {
 		S.decl('SameMotion');
 
 		// initialize constraints
+		
+		function has(arr, el) {
+			for (var i=0;i<arr.length;++i) if (arr[i] === el) return true;
+			return false;
+		}
+		function getName(func) {
+			return func.toString().match(/function ([a-zA-Z0-9]*)/i)[1];
+		}
 		for (var i=0;i<constraints.length;++i) {
-			function has(arr, el) {
-				for (var i=0;i<arr.length;++i) { if (arr[i] === el) return true; }
-				return false;
-			}
-			if (options.constraints === true || has(options.constraints, constraints[i].name)) {
+			if (options.constraints === true || has(options.constraints, constraints[i].name || getName(constraints[i]))) {
 				constraints[i](S, root);
 			}
 		}
