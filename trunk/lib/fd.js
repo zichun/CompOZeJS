@@ -221,8 +221,14 @@ var FD = (function (exports, Math) {
             // due to access via 'this'. However, the queue
             // is an array whose contents are common to all 
             // branchers part of the same tree.
-            var b = this.queue[this.next_brancher];
-            return b ? b.branch.call(this, this.space) : null;
+            var b, ch = null;
+
+            do {
+                b = this.queue[this.next_brancher];
+                ch = b ? b.branch.call(this, this.space) : null;
+            } while (ch === null && this.descend());
+
+            return ch;
         },
 
         enqueue: function (b) {
@@ -565,8 +571,34 @@ var FD = (function (exports, Math) {
             return this.dom[this.dom.length - 1][1];
         },
 
+        // This "mid" function is quick to calculate and is a useful
+        // compromise if you aren't really interested in the exact 
+        // middle value, but something along the lines of "avoid the
+        // extremes" as best as you can, as fast as you can.
+        rough_mid: function () {
+            var midDomIx = Math.floor(this.dom.length / 2);
+            var midDom = this.dom[midDomIx];
+            return Math.round((midDom[0] + midDom[1]) / 2);
+        },
+
+        // This is true "mid" function that returns the exact middle
+        // value of the domain, but needs to run through the whole domain
+        // to do it. Can be made more efficient, see TODO note below.
         mid: function () {
-            return (this.min() + this.max()) >> 1;
+            var size = this.size();
+            var midIx = Math.floor(size / 2);
+            var domIx = 0;
+            var dom = this.dom[domIx];
+
+            // TODO: By right, we should do a binary search here
+            // instead of a linear search. Yes, I'm lazy :P (Kumar)
+            while (midIx > dom[1] - dom[0]) {
+                midIx -= dom[1] - dom[0] + 1;
+                domIx++;
+                dom = this.dom[domIx];
+            }
+
+            return dom[0] + midIx; 
         }
     };
 
@@ -1367,32 +1399,17 @@ var FD = (function (exports, Math) {
             throw 'FD.distribute.generic: Invalid spec';
         }
 
+        // The role of the branch() function is to produce a function (S, n)
+        // that will return S with the choice point n committed. The function's
+        // 'numChoices' property will tell you how many choices are available.
         branch_sequence.branch = function (S) {
             var vars, v, doms, Sc;
 
-            if (!S.__branch_state) {
-                vars = filterfn(S, varnames);
+            vars = filterfn(S, varnames);
+            if (vars.length > 0) {
+                v = select_by_order(S, vars, orderingfn);
 
-                if (vars.length > 0) {
-                    v = select_by_order(S, vars, orderingfn);
-
-                    if (v) {
-                        doms = valuefn(S, v);
-
-                        S.__branch_state = {fdvar: v, doms: doms};
-                    }
-                }
-           }
-
-            if (!S.__branch_state) {
-                // Try the next brancher in the queue if we can't branch.
-                return S.brancher.descend_and_branch();
-            }
-
-            if (S.__branch_state.doms.length > 0) {
-                Sc = S.clone();
-                Sc.vars[S.__branch_state.fdvar].constrain(S.__branch_state.doms.pop());
-                return Sc;
+                return v ? valuefn(v) : null;
             } else {
                 return null;
             }
@@ -1433,37 +1450,133 @@ var FD = (function (exports, Math) {
         }
     };
 
+    // The interface contract for "values" functions is that
+    // they take a variable name and return a function that will
+    // impose a sequence of choices on the variable into a given
+    // space. The returned function (S, n) will commit the given
+    // space S to a choice for the originally specified variable.
+    // The returned function's "numChoices" property tells you
+    // how many choices are available, and the choices are numbered
+    // from 0 to numChoices-1.
+    //
+    // Note that this change of interface has resulted in a noticeable
+    // performance degradation. My guess is that the degradation is due
+    // to the computations outside the switch blocks having to execute
+    // for every choice, whereas in the earlier implementation there
+    // were only executed once per space.
     Distribute.generic.values = {
-        min: function (S, v) {
-            var d = S.vars[v].min();
-            return [[[d+1, S.vars[v].max()]], [[d, d]]];
-        },
 
-        max: function (S, v) {
-            var d = S.vars[v].max();
-            return [[[S.vars[v].min(), d-1]], [[d, d]]];
-        },
-
-        mid: function (S, v) {
-            var fv = S.vars[v];
-            var d = fv.mid();
-            if (d > fv.min()) {
-                return [[[fv.min(), d-1],[d+1, fv.max()]], [[d, d]]];
-            } else {
-                return [[[d+1, fv.max()]], [[d, d]]];
+        // Picks the smallest value in the domain first.
+        min: function (v) {
+            function options(S, n) {
+                var vS = S.vars[v];
+                var d = vS.min();
+                switch (n) {
+                    case 0: 
+                        vS.constrain([[d, d]]);
+                        return S;
+                    case 1: 
+                        vS.constrain([[d+1, vS.max()]]);
+                        return S;
+                    default: 
+                        throw new Error("Invalid choice");
+                }
             }
+
+            options.numChoices = 2;
+            return options;
         },
 
-        splitMin: function (S, v) {
-            var d = S.vars[v].dom;
-            var m = (d[0][0] + d[d.length - 1][1]) >> 1;
-            return [[[m+1, d[d.length - 1][1]]], [[d[0][0], m]]];
+        // Picks the largest value in the domain first.
+        max: function (v) {
+            function options(S, n) {
+                var vS = S.vars[v];
+                var d = vS.max();
+                switch (n) {
+                    case 0:
+                        vS.constrain([[d, d]]);
+                        return S;
+                    case 1:
+                        vS.constrain([[vS.min(), d-1]]);
+                        return S;
+                    default:
+                        throw new Error("Invalid choice");
+                }
+            }
+
+            options.numChoices = 2;
+            return options;
         },
 
-        splitMax: function (S, v) {
-            var d = S.vars[v].dom;
-            var m = (d[0][0] + d[d.length - 1][1]) >> 1;
-            return [[[d[0][0], m]], [[m+1, d[d.length - 1][1]]]];
+        // Picks the middle value in the domain first.
+        mid: function (v) {
+            function options(S, n) {
+                var fv = S.vars[v];
+                var d = fv.mid();
+                if (n === 0) {
+                    fv.constrain([[d, d]]);
+                    return S;
+                } else if (n === 1) {
+                    if (d > fv.min()) {
+                        fv.constrain([[fv.min(), d-1], [d+1, fv.max()]]);
+                        return S;
+                    } else {
+                        fv.constrain([[d+1, fv.max()]]);
+                        return S;
+                    }
+                } else {
+                    throw new Error("Invalid choice");
+                }
+            }
+
+            options.numChoices = 2;
+            return options;
+        },
+
+        // splits the domain roughly down the middle, trying the
+        // lower values first.
+        splitMin: function (v) {
+            function options(S, n) {
+                var vS = S.vars[v];
+                var d = vS.dom;
+                var m = (d[0][0] + d[d.length - 1][1]) >> 1;
+                switch (n) {
+                    case 0:
+                        vS.constrain([[d[0][0], m]]);
+                        return S;
+                    case 1: 
+                        vS.constrain([[m+1, d[d.length - 1][1]]]);
+                        return S;
+                    default:
+                        throw new Error("Invalid choice");
+                }
+            }
+
+            options.numChoices = 2;
+            return options;
+        },
+
+        // splits the domain roughly down the middle, trying the
+        // higher values first.
+        splitMax: function (v) {
+            function options(S, n) {
+                var vS = S.vars[v];
+                var d = vS.dom;
+                var m = (d[0][0] + d[d.length - 1][1]) >> 1;
+                switch (n) {
+                    case 0:
+                        vS.constrain([[m+1, d[d.length - 1][1]]]);
+                        return S;
+                    case 1:
+                        vS.constrain([[d[0][0], m]]);
+                        return S;
+                    default:
+                        throw new Error("Invalid choice");
+                }
+            }
+
+            options.numChoices = 2;
+            return options;
         }
     };
 
@@ -1551,6 +1664,43 @@ var FD = (function (exports, Math) {
         return true;
     };
 
+    // A simple mechanism for branching down a search tree where the
+    // choice points function and info about the number of choices
+    // are both stored in the space itself. This doesn't have to be
+    // the case, however, and you can roll your own strategy and
+    // pass it in the "state.next_choice" field.
+    //
+    // This implementation stores information that is local to
+    // a space in the space itself. That doesn't have to be the
+    // case and the whole search state is passed in which you
+    // can make use of for tracking purposes. For example, you can 
+    // have a stack of choice functions that you can use to recompute
+    // a space at any depth by starting from the root and applying
+    // the options in sequence to a clone of the root space. 
+    //
+    // The implementation below suffices for the depth_first and
+    // branch_and_bound search strategies.
+    function next_choice(space, state) {
+        if (!space.commit) {
+            // Note that the branch call is made only once, irrespective
+            // of how many children this space might generate. The branch
+            // call now returns a choice function that constrains a chosen
+            // variable to a domain indexed by a choice number.
+            space.commit = space.brancher.branch();
+            if (space.commit) {
+                space.commit.nextChoice = 0;
+            }
+        }
+
+        if (space.commit && space.commit.nextChoice < space.commit.numChoices) {
+            // Clone the given space and commit it to the next available choice.
+            // Returned the commited cloned space.
+            return space.commit(space.clone(), space.commit.nextChoice++);
+        } else {
+            return null;
+        }
+    }
+
     // Depth first search.
     // state.space must be the starting space. The object is used to store and 
     // track continuation information from that point onwards.
@@ -1561,7 +1711,7 @@ var FD = (function (exports, Math) {
     Search.depth_first = function (state) {
         var space = state.space;
         var stack = state.stack;
-        var brancher, next_space;
+        var brancher, next_space, choose_next_space;
 
         // If no stack argument, then search begins with this space.
         if (!stack || stack.length === 0) {
@@ -1572,6 +1722,15 @@ var FD = (function (exports, Math) {
             // Set the default "solved" condition to be "all variables".
             state.is_solved = Search.solve_for_variables();
         }
+
+        if (!state.next_choice) {
+            // Set the default branch generator to the next_choice
+            // function, which is a simple implementation of generating
+            // branches from index 0 to N-1.
+            state.next_choice = next_choice;
+        }
+
+        choose_next_space = state.next_choice;
 
         while (stack.length > 0) {
             space = stack[stack.length - 1];
@@ -1596,7 +1755,7 @@ var FD = (function (exports, Math) {
 
                 // Call up the next brancher and fork the space
                 // according to what it says.
-                next_space = space.brancher.branch();
+                next_space = choose_next_space(space, state);
                 if (next_space) {
                     // Push on to the stack and explore further.
                     stack.push(next_space);
@@ -1662,7 +1821,7 @@ var FD = (function (exports, Math) {
     Search.branch_and_bound = function (state, ordering) {
         var space = state.space;
         var stack = state.stack;
-        var brancher, next_space;
+        var brancher, next_space, choose_next_space;
         var bestSolution = state.best;
 
         if (state.error) {
@@ -1680,6 +1839,15 @@ var FD = (function (exports, Math) {
             // Set the default "solved" condition to be "all variables".
             state.is_solved = Search.solve_for_variables();
         }
+
+        if (!state.next_choice) {
+            // Set the default branch generator to the next_choice
+            // function, which is a simple implementation of generating
+            // branches from index 0 to N-1.
+            state.next_choice = next_choice;
+        }
+
+        choose_next_space = state.next_choice;
 
         while (stack.length > 0) {
             space = stack[stack.length - 1];
@@ -1703,12 +1871,12 @@ var FD = (function (exports, Math) {
                     // We now try to find something better based on the given
                     // ordering.
                     if (state.more) {
-                        next_space = stack[stack.length - 1].brancher.branch();
+                        next_space = choose_next_space(stack[stack.length - 1], state);
                         while (!next_space && stack.length > 0) {
                             stack[stack.length - 1].done();
                             stack.pop();
                             if (stack.length > 0) {
-                                next_space = stack[stack.length - 1].brancher.branch();
+                                next_space = choose_next_space(stack[stack.length - 1], state);
                             } else {
                                 break;
                             }
@@ -1746,7 +1914,7 @@ var FD = (function (exports, Math) {
 
                 // Call up the next brancher and fork the space
                 // according to what it says.
-                next_space = space.brancher.branch();
+                next_space = choose_next_space(space, state);
                 if (next_space) {
                     // Push on to the stack and explore further.
                     if (state.needs_constraining && bestSolution) {

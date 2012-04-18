@@ -54,12 +54,17 @@ $(function() {
 		/** get ordering **/
 		var ordering = new Function("S", "solution", $("#ordering").val() );
 		
+		var visual = $("#visual").is(":checked");
+		
 		var solverOption = {
 			CF: CF,
 			constraints: constraints,
 			soln_limit: soln_limit,
 			ordering: ordering
 		};
+		if (visual) {
+			solverOption['visualize'] = 'solns';
+		}
 
 		renderAbc('cf', ArrayToABC(CF));
 		$("#solns").empty();
@@ -126,16 +131,16 @@ hr { border: 1px solid black; border-width: 1px 0 0 0;}
 }
 body { background-color: #d5d5d5; }
 body { 	font-family: Helvetica, Arial, sans-serif; }
-#sidebar {width: 364px; background: #eee; position: fixed; top: 0px; bottom: 0px; right: 0; padding: 30px 8px 0 8px; padding-top: 200px;}
+#sidebar {width: 364px; background: #eee; position: fixed; top: 0px; bottom: 0px; right: 0; padding: 30px 8px 0 8px; padding-top: 200px; z-index: 9;}
 	#sidebar textarea, #sidebar select { width: 364px; }
 	#input { font-family: consolas;}
 	#sidebar strong { display: block; margin-top: 8px; text-align: left; }
 	#constraints { display: block; width: 364px; }
-#header { position: fixed; z-index: 11;width: 850px; top: 10px; right: 80px; height: 120px; background: white; z-index: 10; padding: 18px 8px 8px 8px; font-size: 12px;}
+#header { position: fixed; z-index: 11;width: 850px; top: 10px; right: 80px; height: 120px; background: white; padding: 18px 8px 8px 8px; font-size: 12px;}
 	#header:hover { z-index: 15; }
 	#header p {margin: 5px 0 15px 0; }
 	#header h1 { font-size: 1.8em; text-align: right;}
-	
+#solns {position: relative; z-index: 0; }
 #solns .soln a { color: #933; text-decoration: underline;}
 #container { margin-right: 380px; margin-top: 160px ; position: relative; z-index: 12; background: #d5d5d5;}
 </style>
@@ -183,6 +188,8 @@ $(function() {
 	<textarea id="input">D,F,E,D,G,F,A,G,F,E,D</textarea><br />
 	<input type="button" value="Solve" id="solve-button" />
 		
+	<strong>Visual: <input type="checkbox" id="visual" /></strong>
+
 	<strong>Constraints</strong>
 	<select id="constraints" multiple="multiple"></select>
 	
@@ -194,6 +201,7 @@ $(function() {
 S.lt('Parallels', S.const(solution.Parallels));
 S.lt('SameMotion', S.const(solution.SameMotion));
 	</textarea>
+	
 </div>
 
 <div id="container">
