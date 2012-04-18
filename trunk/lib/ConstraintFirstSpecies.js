@@ -13,7 +13,8 @@ function SolveFirstSpecies(options, cb) {
 		soln_limit: false, 
 		clef: 'treble',
 		search_strategy: 'split',
-		search_ordering: 'branch_and_bound'
+		search_ordering: 'branch_and_bound',
+		constraints: true,
 	}, options);
 	
 
@@ -34,6 +35,7 @@ function SolveFirstSpecies(options, cb) {
 	var S = new FD.space();
 	S.decl(root, [semitoneRange] );
 	S.decl('Parallels');
+	S.decl('SameMotion');
 	
 	/**
 	 * Constraints is an array of functions
@@ -308,13 +310,39 @@ function SolveFirstSpecies(options, cb) {
 			}
 			S.sum( sum, 'Parallels' );
 		}
+		
+		,function minimizeSameMotions(S, root) {
+			// computes the number of same motions in the soln vis-a-vis CF
+			var sum = [];
+			for (var i=0;i<cantus_firmus.length-1;++i) {
+				(function(i) {
+					if (cantus_firmus[i].getCoordinate() > cantus_firmus[i+1].getCoordinate()) {
+						// downwards
+						sum.push(
+							S.reified('gt', 
+								[ 'N'+i, 'N'+(i+1) ]));
+					} else {
+						sum.push(
+							S.reified('lt', 
+								[ 'N'+i, 'N'+(i+1) ]));
+					}
+				})(i);
+			}
+			S.sum( sum, 'SameMotion' );
+		}
 
 	];
 	})();
 
 	// initialize constraints
 	for (var i=0;i<constraints.length;++i) {
-		constraints[i](S, root);
+		function has(arr, el) {
+			for (var i=0;i<arr.length;++i) { if (arr[i] === el) return true; }
+			return false;
+		}
+		if (options.constraints === true || has(options.constraints, constraints[i].name)) {
+			constraints[i](S, root);
+		}
 	}
 	FD.distribute[options.search_strategy](S, root);
 
@@ -322,14 +350,16 @@ function SolveFirstSpecies(options, cb) {
 	var state = {space: S};
 	
 	function ordering(S, solution) {
-		S.lt('Parallels', S.const(solution.Parallels));
+		var pscore = 1, mscore = 1;
+		S.lt( S.wsum([pscore,mscore], ['Parallels','SameMotion']), 
+			S.const(pscore * solution.Parallels + mscore * solution.SameMotion));
 	}
 	function solve() {
 		state.single_step = true;
 		state.is_solved = state.is_solved || FD.search.solve_for_variables(root);
 
 		if (options.search_ordering === 'branch_and_bound') {
-			state = FD.search.branch_and_bound(state, ordering);		
+			state = FD.search.branch_and_bound(state, options.ordering || ordering);
 		} else if (options.search_ordering === 'dfs') {
 			state = FD.search.depth_first(state);
 		} else {

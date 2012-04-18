@@ -29,26 +29,44 @@ function ArrayToABC(arr) {
 function SolnToABC(soln) {
 	var arr = [];
 	for (var notes in soln) {
-		if (notes === 'Parallels') continue;
+		if (notes === 'Parallels' || notes==='SameMotion') continue;
 		arr.push( Note.CoordinateToNote(soln[notes]) );
 	}
 	return ArrayToABC(arr);
 }
 $(function() {
 	$("#solve-button").click(function() {
+		/** convert input into cantus firmus **/
 		var CF = $("#input").val().split(',');
 		for (var i=0;i<CF.length;++i) {
 			CF[i] = new Note(CF[i], 0);
 		}
+
+		/** get all selected constraints **/
+		var constraints = [];
+		$("#constraints option:selected").each(function() {
+			constraints.push($(this).val());
+		});
+		
+		/** get soln-limit **/
+		var soln_limit = parseInt( $("#soln-limit").val() );
+		
+		/** get ordering **/
+		var ordering = new Function("S", "solution", $("#ordering").val() );
+		
+		var solverOption = {
+			CF: CF,
+			constraints: constraints,
+			soln_limit: soln_limit,
+			ordering: ordering
+		};
 
 		renderAbc('cf', ArrayToABC(CF));
 		$("#solns").empty();
 		
 		var start = Date.now();
 		cnt = 0;
-		SolveFirstSpecies({
-			CF: CF
-		}, function(result) {
+		SolveFirstSpecies(solverOption, function(result) {
 			var now = Date.now();
 			var S = result.best || result.space;
 			if (result.status === 'solved') {
@@ -65,9 +83,10 @@ var showSoln =
 	var cnt = 0;
 	return function(cf, soln) {
 		if (debug !== true) {
-			var $soln = $('<div class="soln" id="soln'+cnt+'" ></div>').appendTo("#solns");
+			var $soln = $('<div class="soln" id="soln'+cnt+'" ></div>').prependTo("#solns");
 			$soln.append( '<div id="soln-ta-'+cnt+'"></div>')
 				.append( '<div id="soln-midi-'+cnt+'"></div>')
+			$('<tt>Parallels: <strong>'+soln.Parallels+'</strong>, SameMotion: <strong>'+soln.SameMotion+'</strong></tt>').prependTo($soln);
 						
 			var abc = 'X:1\nM:C|\nV: RH1 clef=treble\nV: LH1 clef=treble\nK: C\n%\n[V: RH1] ' + SolnToABC(soln);
 			abc += '\n[V: LH1] ' + ArrayToABC(cf);
@@ -105,15 +124,20 @@ hr { border: 1px solid black; border-width: 1px 0 0 0;}
 	border-radius: 10px;
 	margin: 10px;
 }
-#solns .soln a { color: #933; text-decoration: underline;}
 body { background-color: #d5d5d5; }
-#button-div {width: 364px; background: #eee; position: fixed; top: 0px; bottom: 0px; right: 0;text-align: center; padding: 30px 8px 0 8px; padding-top: 200px;}
-	#input { width: 364px; height: 80px; font-family: consolas;}
-html, body, #button-div{ min-height: 100%; }
 body { 	font-family: Helvetica, Arial, sans-serif; }
-#header { position: absolute; width: 850px; top: 10px; right: 80px; height: 120px; background: white; z-index: 10; padding: 18px 8px 8px 8px; font-size: 12px;}
-	#header h1 { font-size: 1.8em; }
-#cf { margin-top: 160px; }
+#sidebar {width: 364px; background: #eee; position: fixed; top: 0px; bottom: 0px; right: 0; padding: 30px 8px 0 8px; padding-top: 200px;}
+	#sidebar textarea, #sidebar select { width: 364px; }
+	#input { font-family: consolas;}
+	#sidebar strong { display: block; margin-top: 8px; text-align: left; }
+	#constraints { display: block; width: 364px; }
+#header { position: fixed; z-index: 11;width: 850px; top: 10px; right: 80px; height: 120px; background: white; z-index: 10; padding: 18px 8px 8px 8px; font-size: 12px;}
+	#header:hover { z-index: 15; }
+	#header p {margin: 5px 0 15px 0; }
+	#header h1 { font-size: 1.8em; text-align: right;}
+	
+#solns .soln a { color: #933; text-decoration: underline;}
+#container { margin-right: 380px; margin-top: 160px ; position: relative; z-index: 12; background: #d5d5d5;}
 </style>
 <script>
 var Default = {
@@ -124,6 +148,7 @@ var Default = {
 	Mixolydian: 'Gv,C,Bv,Gv,C,E,D,G,E,C,D,Bv,Av,Gv',
 	Iondian: 'C,E,F,G,E,A,G,E,F,E,D,C'
 };
+var Constraints = ["noDissonance", "noAugmentedOrDiminishedNoteBetweenSuceedingNotes", "noMajorSixOrSevenOrOctaveLeap", "ascendingLeapfollowedByStep", "noDescendingMinorSixth", "noDirectToPerfectConsonance", "noUnison", "firstBarIsOctaveFifthOrUnison", "secondLastBarMajorSixth", "lastBarOctave", "noCrossing", "noAccidentalsExceptForSecondLastBar", "minimizeParallels", "minimizeSameMotions"];
 $(function() {
 	var $pl = $("#pre-load");
 	for (var type in Default) {
@@ -134,30 +159,46 @@ $(function() {
 	$pl.change(function() {
 		$("#input").val(Default[$pl.find('option:selected').attr('value')]);
 	});
+	
+	for (var i=0;i<Constraints.length;++i) {
+		$("#constraints").append('<option selected="selected" title="'+Constraints[i]+'" value="'+Constraints[i]+'">'+Constraints[i]+'</option>');
+	}
 });
 </script>
 </head>
 <body>
 
-<div id="header">
+<div id="header" class="header">
 	<h1>CompOZeJS</h1>
-	CompOZeJS is a project to assist students to learn counterpoint theory. Currently it is a tool to generate counter melodies with respect to the rules of counterpoint theory. 
-	<br />
-	<br />
-	To generate your own counter-melody, type in your own melody line at the textbox below, or select one of the common melodies below! Enjoy. 
-	<br />
-	<br />
+	<p>
+		CompOZeJS is a project to assist students to learn counterpoint theory. Currently it is a tool to generate counter melodies with respect to the rules of counterpoint theory. 
+	</p>
+	<p>
+		To generate your own counter-melody, type in your own melody line at the textbox below, or select one of the common melodies below! Enjoy. 
+	</p>
 </div>
 
-<div id="container">
-<div id="button-div">
+<div id="sidebar">
 	Preload a cantus firmus: <select id="pre-load"></select><br />
 	<textarea id="input">D,F,E,D,G,F,A,G,F,E,D</textarea><br />
 	<input type="button" value="Solve" id="solve-button" />
+		
+	<strong>Constraints</strong>
+	<select id="constraints" multiple="multiple"></select>
+	
+	<strong>Limit Solns</strong>
+	<input type="text" id="soln-limit" value="20" />
+
+	<strong>Branch&Bound Ordering</strong>
+	<textarea id="ordering">
+S.lt('Parallels', S.const(solution.Parallels));
+S.lt('SameMotion', S.const(solution.SameMotion));
+	</textarea>
 </div>
 
-<div id="cf"></div>
-<div id="solns"></div>
+<div id="container">
+	<div id="cf"></div>
+	<div id="solns"></div>
 </div>
 
 </body>
