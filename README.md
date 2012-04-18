@@ -30,6 +30,7 @@ Dependencies
 - abcjs 	-- http://code.google.com/p/abcjs/ 
 - fd.js 	-- http://nishabdam.com:8080/fd/index
 - jQuery	-- http://jquery.com
+- Search Tree Visualisation --  http://minhtule.github.com/Search-Tree-Visualization/
 
 Acknowledgements
 ----------------
