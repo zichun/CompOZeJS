@@ -9,7 +9,7 @@ Counterpoint theory essentially aims to generate music that harmonizes with the 
 
 Currently CompOZeJS uses rules from first-species modal counterpoint theory. This is chosen as a start as this can be a framework that we can use to model other parts of counterpoint theory.
 
-CompOZeJS is released under the GPLv3. 
+CompOZeJS is released under the [GPLv3](http://www.gnu.org/licenses/gpl.html). 
 
 Usage
 -----
@@ -27,8 +27,17 @@ Additional notes about the input:
 Dependencies
 ------------
 
-abcjs 	-- http://code.google.com/p/abcjs/ 
-fd.js 	-- http://nishabdam.com:8080/fd/index
-jQuery	-- http://jquery.com
+- abcjs 	-- http://code.google.com/p/abcjs/ 
+- fd.js 	-- http://nishabdam.com:8080/fd/index
+- jQuery	-- http://jquery.com
+
+Acknowledgements
+----------------
+
+### Mentors
+
+* Associate Professor Martin Henz
+* Srikumar Subramanian
+* Dr Eddy Chong
 
 
