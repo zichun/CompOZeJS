@@ -1,5 +1,10 @@
-var firstSpecies = 
-
+/*
+ * DFS Solver for First Species counterpoints
+ *
+ * Copyright (c) 2012 Koh Zi Chun and Joe Chee (https://github.com/zichun/CompOZeJS)
+ * Licensed under the MIT (http://www.opensource.org/licenses/mit-license.php) license.
+ */
+ var firstSpecies = 
 (function () {
 	function firstSpecies(input, output) {
 	

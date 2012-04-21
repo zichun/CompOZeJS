@@ -1,5 +1,9 @@
-// requires DomainHelper.js, fd.js, jq.js
-// todo: factorize parameters to options
+/*
+ * Constraint Solver for First Species counterpoints
+ *
+ * Copyright (c) 2012 Koh Zi Chun and Joe Chee (https://github.com/zichun/CompOZeJS)
+ * Licensed under the MIT (http://www.opensource.org/licenses/mit-license.php) license.
+ */
 function SolveFirstSpecies(options, cb) {
 
 	if (typeof options['CF'] === 'undefined') {

@@ -1,4 +1,10 @@
-var Interval = 
+/*
+ * Interval class to calculate intervals between two notes
+ *
+ * Copyright (c) 2012 Koh Zi Chun and Joe Chee (https://github.com/zichun/CompOZeJS)
+ * Licensed under the MIT (http://www.opensource.org/licenses/mit-license.php) license.
+ */
+ var Interval = 
 (function() {
 
 	function Interval(notes, semitones) {			

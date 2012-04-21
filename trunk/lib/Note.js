@@ -1,6 +1,9 @@
-/**
- * Note Class
- **/
+/*
+ * Note Object
+ *
+ * Copyright (c) 2012 Koh Zi Chun and Joe Chee (https://github.com/zichun/CompOZeJS)
+ * Licensed under the MIT (http://www.opensource.org/licenses/mit-license.php) license.
+ */
 var Note =
 (function() {
 	

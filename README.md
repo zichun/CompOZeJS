@@ -1,6 +1,12 @@
 CompOZeJS
 =========
 
+Authors
+------------
+
+* Koh Zi Chun
+* Joe Chee Seng Hong
+
 Introduction
 ------------
 CompOZeJS is a project to assist students to learn counterpoint theory. Currently it is a tool to generate counter melodies using the rules of counterpoint theory. 
@@ -9,7 +15,7 @@ Counterpoint theory essentially aims to generate music that harmonizes with the 
 
 Currently CompOZeJS uses rules from first-species modal counterpoint theory. This is chosen as a start as this can be a framework that we can use to model other parts of counterpoint theory.
 
-CompOZeJS is released under the [GPLv3](http://www.gnu.org/licenses/gpl.html). 
+CompOZeJS is released under the [MIT License] (http://www.opensource.org/licenses/MIT). 
 
 Usage
 -----
